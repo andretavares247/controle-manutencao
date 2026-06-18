@@ -1,0 +1,15 @@
+{
+  "name": "Controle de Manutenção",
+  "short_name": "Manutenção",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f2742",
+  "theme_color": "#123a63",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -672,13 +672,13 @@ renderAll();
 function buscarModeloPorPlaca(placa) {
   placa = String(placa || "").toUpperCase().trim();
 
-  const registro = records.find(r =>
+ const registro = veiculos.find(r =>
     String(getField(r, ["Placa"]) || "").toUpperCase().trim() === placa
   );
 
   if (registro) {
     const modelo = getField(registro, ["Modelo"]);
-    const campoModelo = document.querySelector('input[name="modelo"]');
+   const campoModelo = document.getElementById('modeloInput');
 
     if (campoModelo && modelo) {
       campoModelo.value = modelo;

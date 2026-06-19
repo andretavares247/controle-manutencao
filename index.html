@@ -1,27 +1,672 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Controle de Manutenção</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#123a63"><style>
-:root{--azul:#123a63;--verde:#65a844;--laranja:#ef7d2c;--cinza:#777;--bg:#f4f7fb}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:#17202a}header{background:linear-gradient(135deg,var(--azul),#0f2742);color:white;padding:18px 16px;position:sticky;top:0;z-index:3}h1{font-size:20px;margin:0}.tabs{display:flex;gap:8px;padding:10px;background:white;position:sticky;top:61px;z-index:2;overflow:auto;box-shadow:0 2px 8px #0001}button{border:0;border-radius:10px;padding:10px 12px;font-weight:700;background:#e6eef7;color:#123a63}button.active{background:#123a63;color:white}main{padding:14px;max-width:1100px;margin:auto}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}.card{background:white;border-radius:16px;padding:14px;box-shadow:0 4px 14px #0001}.kpi{color:white;text-align:center;min-height:88px;display:flex;flex-direction:column;justify-content:center}.kpi b{font-size:28px;margin-top:8px}.blue{background:#5b9bd5}.green{background:#70ad47}.orange{background:#ed7d31}.gray{background:#888}.red{background:#e53935}.yellow{background:#ffc000;color:#222}.section{display:none}.section.on{display:block}input,select{width:100%;padding:11px;border:1px solid #ccd6e0;border-radius:10px;background:white}label{font-size:13px;font-weight:700;margin:8px 0 4px;display:block}.formgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}table{width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden}th,td{padding:9px;border-bottom:1px solid #eef2f6;text-align:left;font-size:13px}th{background:#d9eaf8}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.pill{display:inline-block;padding:4px 8px;border-radius:999px;font-weight:700;font-size:12px}.ok{background:#dff2d8;color:#2e7d32}.bad{background:#fde0dc;color:#b71c1c}canvas{width:100%;max-height:260px}.small{font-size:12px;color:#607080}@media(max-width:700px){th:nth-child(4),td:nth-child(4),th:nth-child(5),td:nth-child(5){display:none}}
-</style></head><body><header><h1>Controle de Manutenção</h1><div class="small" style="color:#d8eafd">App mobile baseado na planilha</div></header><nav class="tabs"><button class="active" onclick="show('dash',this)">Dashboard</button><button onclick="show('lista',this)">Lançamentos</button><button onclick="show('novo',this)">Novo serviço</button><button onclick="show('cadastros',this)">Cadastros</button></nav><main>
-<section id="dash" class="section on"><div class="grid" id="kpis"></div><div class="grid" style="margin-top:12px"><div class="card"><b>OS por tipo</b><canvas id="chartTipo"></canvas></div><div class="card"><b>Status</b><canvas id="chartStatus"></canvas></div><div class="card"><b>Top fornecedores</b><canvas id="chartForn"></canvas></div></div></section>
-<section id="lista" class="section"><div class="toolbar"><input id="busca" placeholder="Buscar por placa, fornecedor, status..." oninput="renderList()"><button onclick="exportCSV()">Exportar CSV</button><button onclick="resetData()">Restaurar base inicial</button></div><div class="card" style="overflow:auto"><table id="tbl"></table></div></section>
-<section id="novo" class="section"><div class="card"><h2>Novo lançamento</h2><div class="formgrid"><div><label>Data Entrada</label><input id="fDataEntrada" type="date"></div><div><label>Placa</label><input id="fPlaca" list="placas"></div><div><label>Modelo</label><input id="fModelo"></div><div><label>Km Atual</label><input id="fKm" type="number"></div><div><label>Serviço</label><input id="fServico" list="servicos"></div><div><label>Tipo OS</label><select id="fTipo"><option>Preventiva</option><option>Corretiva</option><option>Sinistro</option></select></div><div><label>Fornecedor</label><input id="fFornecedor" list="fornecedores"></div><div><label>Valor</label><input id="fValor" type="number" step="0.01"></div><div><label>Nº OS</label><input id="fOS"></div><div><label>Status</label><select id="fStatus"><option>Aberto</option><option>Em Serviço/Autorizada</option><option>Aguardando Aprovação Movida</option><option>Aguardando Orçamento</option><option>Finalizado</option><option>Cancelado</option></select></div><div><label>Data Finalização</label><input id="fDataFim" type="date"></div></div><div class="toolbar"><button class="active" onclick="saveForm()">Salvar lançamento</button></div></div></section>
-<section id="cadastros" class="section"><div class="grid"><div class="card"><h3>Veículos</h3><div id="veiculos"></div></div><div class="card"><h3>Serviços</h3><div id="servicosBox"></div></div></div></section>
-<datalist id="placas"></datalist><datalist id="servicos"></datalist><datalist id="fornecedores"></datalist></main><script>
-const INITIAL={"lancamentos": [{"Data Entrada": null, "Placa": "SVW6H00", "Modelo": "OROCH", "Km Atual": null, "Serviço": "Troca de óleo", "Tipo OS": "Preventiva", "Fornecedor": null, "Valor": null, "Nº OS": null, "Status": null, "Data Finalização": null, "Dias Parado": null, "SLA 5 Dias": null}], "veiculos": [{"Placa": "SVL1G71", "Modelo": "OROCH", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SVZ9G80", "Modelo": "OROCH", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SWK5G71", "Modelo": "OROCH", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SVW6H00", "Modelo": "OROCH", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SVN8J71", "Modelo": "OROCH", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYP3C32", "Modelo": "COMMANDER", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYO4E12", "Modelo": "FIORINO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E77", "Modelo": "STRADA", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E78", "Modelo": "STRADA", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E79", "Modelo": "STRADA", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E80", "Modelo": "STRADA", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E81", "Modelo": "STRADA", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E82", "Modelo": "STRADA", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E83", "Modelo": "STRADA", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYS9J96", "Modelo": "STRADA", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYS9J98", "Modelo": "STRADA", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYT0A02", "Modelo": "STRADA", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYQ3C93", "Modelo": "STRADA", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR3A13", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D70", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D71", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D72", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D73", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D74", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR5H87", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D75", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D76", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D77", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D78", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D79", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D80", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D81", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D82", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D83", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D84", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E22", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E23", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E24", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E25", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E27", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E28", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E29", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E30", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E31", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E32", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E33", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E34", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E35", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E36", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E37", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E38", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E39", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E40", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR5H88", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E41", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E42", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E45", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E46", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E47", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E48", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E49", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E50", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E51", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D85", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D87", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D88", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E92", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E93", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E94", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E95", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E96", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E97", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E98", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E99", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1F01", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1F02", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D89", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D90", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D91", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D92", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D93", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D94", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1D97", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E52", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E53", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E55", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1E56", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR1F05", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR6E04", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR6E08", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR2D16", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR2D18", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR2D20", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR6E10", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR6E11", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR6E12", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR6E13", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR6E14", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYR6E16", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYS6E55", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYS7A45", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYS7A47", "Modelo": "ARGO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SUD7I60", "Modelo": "S10", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "STM2F41", "Modelo": "S10", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SVB5J20", "Modelo": "S10", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SVE7J50", "Modelo": "S10", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SWC9I51", "Modelo": "S10", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SSU2I20", "Modelo": "S10", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SWY0I11", "Modelo": "S10", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SVK1F51", "Modelo": "SAVEIRO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SVJ9G20", "Modelo": "SAVEIRO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SVO3J51", "Modelo": "SAVEIRO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SWA4H70", "Modelo": "SAVEIRO", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SUI1H40", "Modelo": "DUSTER", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SWL5E91", "Modelo": "DUSTER", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SSR0E80", "Modelo": "DUSTER", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYK4A34", "Modelo": "STRADA", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYK4A35", "Modelo": "STRADA", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SYK4A36", "Modelo": "STRADA", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SVZ1J81", "Modelo": "S10", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SVK9E51", "Modelo": "S10", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "STF8H10", "Modelo": "S10", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "STU6G20", "Modelo": "S10", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "SUM7J61", "Modelo": "S10", "Ano": null, "Status": "Ativo", "Observação": null}, {"Placa": "STH9I20", "Modelo": "S10", "Ano": null, "Status": "Ativo", "Observação": null}], "servicos": [{"Serviço": "Troca de óleo", "Tipo OS": "Preventiva", "SLA Padrão (dias)": 5, "Periodicidade KM": 10000, "Observação": null}, {"Serviço": "Filtro de óleo", "Tipo OS": "Preventiva", "SLA Padrão (dias)": 5, "Periodicidade KM": 10000, "Observação": null}, {"Serviço": "Filtro de ar", "Tipo OS": "Preventiva", "SLA Padrão (dias)": 5, "Periodicidade KM": 10000, "Observação": null}, {"Serviço": "Alinhamento", "Tipo OS": "Preventiva", "SLA Padrão (dias)": 3, "Periodicidade KM": 10000, "Observação": null}, {"Serviço": "Balanceamento", "Tipo OS": "Preventiva", "SLA Padrão (dias)": 3, "Periodicidade KM": 10000, "Observação": null}, {"Serviço": "Troca de pneu", "Tipo OS": "Preventiva", "SLA Padrão (dias)": 5, "Periodicidade KM": 40000, "Observação": null}, {"Serviço": "Revisão preventiva", "Tipo OS": "Preventiva", "SLA Padrão (dias)": 5, "Periodicidade KM": 10000, "Observação": null}, {"Serviço": "Troca de bateria", "Tipo OS": "Corretiva", "SLA Padrão (dias)": 3, "Periodicidade KM": null, "Observação": null}, {"Serviço": "Freio", "Tipo OS": "Corretiva", "SLA Padrão (dias)": 5, "Periodicidade KM": null, "Observação": null}, {"Serviço": "Suspensão", "Tipo OS": "Corretiva", "SLA Padrão (dias)": 5, "Periodicidade KM": null, "Observação": null}, {"Serviço": "Elétrica", "Tipo OS": "Corretiva", "SLA Padrão (dias)": 5, "Periodicidade KM": null, "Observação": null}, {"Serviço": "Motor", "Tipo OS": "Corretiva", "SLA Padrão (dias)": 7, "Periodicidade KM": null, "Observação": null}, {"Serviço": "Ar-condicionado", "Tipo OS": "Corretiva", "SLA Padrão (dias)": 5, "Periodicidade KM": null, "Observação": null}, {"Serviço": "Funilaria", "Tipo OS": "Corretiva", "SLA Padrão (dias)": 7, "Periodicidade KM": null, "Observação": null}, {"Serviço": "Lanternagem", "Tipo OS": "Corretiva", "SLA Padrão (dias)": 7, "Periodicidade KM": null, "Observação": null}, {"Serviço": "Troca de para-brisa", "Tipo OS": "Corretiva", "SLA Padrão (dias)": 5, "Periodicidade KM": null, "Observação": null}, {"Serviço": "Guincho", "Tipo OS": "Corretiva", "SLA Padrão (dias)": 2, "Periodicidade KM": null, "Observação": null}, {"Serviço": "Sinistro", "Tipo OS": "Sinistro", "SLA Padrão (dias)": 10, "Periodicidade KM": null, "Observação": null}, {"Serviço": "Outros", "Tipo OS": "Corretiva", "SLA Padrão (dias)": 5, "Periodicidade KM": null, "Observação": null}]};
-let DB=JSON.parse(localStorage.getItem('manutencaoDB')||JSON.stringify(INITIAL));
-function norm(v){return (v??'').toString().trim()}
-function daysBetween(a,b){if(!a)return 0;let d1=new Date(a),d2=b?new Date(b):new Date();return Math.max(0,Math.round((d2-d1)/(1000*60*60*24)))}
-function enrich(r){let dias=Number(r['Dias Parado']); if(!dias) dias=daysBetween(r['Data Entrada'],r['Data Finalização']); let sla=dias<=5?'Dentro SLA':'Fora SLA'; return {...r,'Dias Parado':dias,'SLA 5 Dias':r['SLA 5 Dias']||sla}}
-function all(){return DB.lancamentos.map(enrich).filter(r=>norm(r.Placa)||norm(r.Serviço)||norm(r.Status))}
-function countBy(key, rows=all()){let m={}; rows.forEach(r=>{let k=norm(r[key])||'(vazio)'; m[k]=(m[k]||0)+1}); return m}
-function show(id,btn){document.querySelectorAll('.section').forEach(s=>s.classList.remove('on'));document.getElementById(id).classList.add('on');document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active'); if(id==='lista')renderList(); if(id==='cadastros')renderCad(); renderDash()}
-function renderDash(){let rows=all(),total=rows.length,fin=rows.filter(r=>norm(r.Status)==='Finalizado').length,ab=total-fin,dias=rows.reduce((s,r)=>s+(Number(r['Dias Parado'])||0),0)/(total||1),ok=rows.filter(r=>norm(r['SLA 5 Dias'])==='Dentro SLA').length,pct=ok/(total||1); let cls=pct>=.9?'green':pct>=.8?'yellow':'red'; document.getElementById('kpis').innerHTML=`<div class="card kpi blue">Total OS<b>${total}</b></div><div class="card kpi green">Finalizadas<b>${fin}</b></div><div class="card kpi orange">Em aberto<b>${ab}</b></div><div class="card kpi gray">Média dias<b>${dias.toFixed(1).replace('.',',')}</b></div><div class="card kpi ${cls}">SLA dentro<b>${Math.round(pct*100)}%</b></div>`; drawBar('chartTipo',countBy('Tipo OS'),['#5b9bd5','#70ad47','#ed7d31']); drawBar('chartStatus',countBy('Status'),['#70ad47','#ed7d31','#5b9bd5','#ffc000','#e53935']); drawBar('chartForn',top(countBy('Fornecedor'),8),['#123a63','#1f5b89','#5b9bd5']);}
-function top(obj,n){return Object.fromEntries(Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n))}
-function drawBar(id,obj,colors){let c=document.getElementById(id),ctx=c.getContext('2d'),w=c.width=c.clientWidth*2,h=c.height=260*2;ctx.clearRect(0,0,w,h);let entries=Object.entries(obj),max=Math.max(1,...entries.map(e=>e[1])),barH=h/(entries.length||1)-14;ctx.font='24px Arial';entries.forEach((e,i)=>{let y=i*(barH+14)+20,bw=(w-260)*(e[1]/max);ctx.fillStyle=colors[i%colors.length];ctx.fillRect(210,y,bw,barH);ctx.fillStyle='#17202a';ctx.fillText(e[0].slice(0,18),10,y+barH*.65);ctx.fillText(e[1],220+bw,y+barH*.65)})}
-function renderList(){let q=norm(document.getElementById('busca').value).toLowerCase();let rows=all().filter(r=>JSON.stringify(r).toLowerCase().includes(q)).slice(0,500);let cols=['Data Entrada','Placa','Modelo','Serviço','Tipo OS','Fornecedor','Status','Dias Parado','SLA 5 Dias'];document.getElementById('tbl').innerHTML='<tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr>'+rows.map(r=>'<tr>'+cols.map(c=>`<td>${c==='SLA 5 Dias'?'<span class="pill '+(r[c]==='Dentro SLA'?'ok':'bad')+'">'+norm(r[c])+'</span>':norm(r[c])}</td>`).join('')+'</tr>').join('')}
-function renderCad(){document.getElementById('veiculos').innerHTML=DB.veiculos.slice(0,120).map(v=>`<div>${v.Placa||''} - ${v.Modelo||''}</div>`).join('');document.getElementById('servicosBox').innerHTML=DB.servicos.map(s=>`<div>${s.Serviço||''} <span class="small">(${s['Tipo OS']||''})</span></div>`).join('')}
-function lists(){let placas=[...new Set(DB.veiculos.map(v=>v.Placa).filter(Boolean))];document.getElementById('placas').innerHTML=placas.map(x=>`<option value="${x}">`).join('');document.getElementById('servicos').innerHTML=[...new Set(DB.servicos.map(s=>s.Serviço).filter(Boolean))].map(x=>`<option value="${x}">`).join('');document.getElementById('fornecedores').innerHTML=[...new Set(all().map(s=>s.Fornecedor).filter(Boolean))].map(x=>`<option value="${x}">`).join('')}
-function saveForm(){let r={'Data Entrada':fDataEntrada.value,'Placa':fPlaca.value,'Modelo':fModelo.value,'Km Atual':fKm.value,'Serviço':fServico.value,'Tipo OS':fTipo.value,'Fornecedor':fFornecedor.value,'Valor':fValor.value,'Nº OS':fOS.value,'Status':fStatus.value,'Data Finalização':fDataFim.value};let e=enrich(r);r['Dias Parado']=e['Dias Parado'];r['SLA 5 Dias']=e['SLA 5 Dias'];DB.lancamentos.push(r);localStorage.setItem('manutencaoDB',JSON.stringify(DB));alert('Lançamento salvo!');document.querySelectorAll('#novo input').forEach(i=>i.value='');lists();renderDash()}
-function exportCSV(){let rows=all();let cols=Object.keys(rows[0]||{});let csv=[cols.join(';'),...rows.map(r=>cols.map(c=>'"'+norm(r[c]).replaceAll('"','""')+'"').join(';'))].join('\n');let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='lancamentos_manutencao.csv';a.click()}
-function resetData(){if(confirm('Restaurar dados iniciais da planilha?')){localStorage.removeItem('manutencaoDB');DB=JSON.parse(JSON.stringify(INITIAL));lists();renderDash();renderList()}}
-if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js');lists();renderDash();
-</script></body></html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle de Manutenção</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f3558">
+  <style>
+    :root {
+      --azul:#0f3558;
+      --azul2:#155e93;
+      --cinza:#f3f6fa;
+      --card:#ffffff;
+      --texto:#0f172a;
+      --muted:#64748b;
+      --verde:#16a34a;
+      --amarelo:#f59e0b;
+      --vermelho:#dc2626;
+      --laranja:#f97316;
+      --borda:#e2e8f0;
+      --shadow:0 18px 45px rgba(15, 23, 42, .10);
+    }
+
+    * { box-sizing:border-box; }
+
+    body {
+      margin:0;
+      font-family: Arial, Helvetica, sans-serif;
+      background:var(--cinza);
+      color:var(--texto);
+    }
+
+    header {
+      background:linear-gradient(135deg,var(--azul),#09233d);
+      color:white;
+      padding:22px 18px 28px;
+      border-bottom-left-radius:22px;
+      border-bottom-right-radius:22px;
+      box-shadow:var(--shadow);
+    }
+
+    header h1 {
+      margin:0;
+      font-size:25px;
+      font-weight:800;
+      letter-spacing:.2px;
+    }
+
+    header p {
+      margin:6px 0 0;
+      opacity:.88;
+      font-size:14px;
+    }
+
+    .wrap {
+      max-width:1180px;
+      margin:-18px auto 80px;
+      padding:0 14px;
+    }
+
+    .tabs {
+      display:flex;
+      gap:10px;
+      overflow:auto;
+      padding-bottom:10px;
+      margin-bottom:14px;
+    }
+
+    .tab {
+      border:0;
+      padding:13px 16px;
+      border-radius:16px;
+      background:#e8eef6;
+      color:var(--azul);
+      font-weight:800;
+      font-size:15px;
+      white-space:nowrap;
+      cursor:pointer;
+    }
+
+    .tab.active {
+      background:var(--azul);
+      color:white;
+    }
+
+    .section { display:none; }
+    .section.active { display:block; }
+
+    .grid {
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:14px;
+    }
+
+    .card {
+      background:var(--card);
+      border:1px solid var(--borda);
+      border-radius:22px;
+      padding:18px;
+      box-shadow:var(--shadow);
+    }
+
+    .kpi .label {
+      color:var(--muted);
+      font-size:13px;
+      font-weight:700;
+      margin-bottom:8px;
+    }
+
+    .kpi .value {
+      font-size:32px;
+      font-weight:900;
+      line-height:1;
+    }
+
+    .kpi.azul { border-left:7px solid var(--azul2); }
+    .kpi.verde { border-left:7px solid var(--verde); }
+    .kpi.laranja { border-left:7px solid var(--laranja); }
+    .kpi.vermelho { border-left:7px solid var(--vermelho); }
+
+    .charts {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+      margin-top:14px;
+    }
+
+    .chart-title {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      margin-bottom:12px;
+    }
+
+    .chart-title h3 {
+      margin:0;
+      font-size:17px;
+    }
+
+    .bar {
+      margin:10px 0;
+    }
+
+    .bar-top {
+      display:flex;
+      justify-content:space-between;
+      font-size:13px;
+      margin-bottom:5px;
+      gap:10px;
+    }
+
+    .bar-track {
+      height:11px;
+      background:#e5e7eb;
+      border-radius:99px;
+      overflow:hidden;
+    }
+
+    .bar-fill {
+      height:100%;
+      background:linear-gradient(90deg,var(--azul2),#38bdf8);
+      width:0%;
+    }
+
+    .status-pill {
+      display:inline-block;
+      padding:7px 10px;
+      border-radius:999px;
+      font-weight:800;
+      font-size:12px;
+    }
+
+    .pill-ok { background:#dcfce7;color:#166534; }
+    .pill-alert { background:#fef3c7;color:#92400e; }
+    .pill-bad { background:#fee2e2;color:#991b1b; }
+    .pill-info { background:#dbeafe;color:#1e3a8a; }
+
+    table {
+      width:100%;
+      border-collapse:collapse;
+      background:white;
+      border-radius:18px;
+      overflow:hidden;
+      box-shadow:var(--shadow);
+      font-size:13px;
+    }
+
+    th, td {
+      padding:11px 10px;
+      border-bottom:1px solid var(--borda);
+      text-align:left;
+      vertical-align:top;
+    }
+
+    th {
+      background:var(--azul);
+      color:white;
+      font-size:12px;
+    }
+
+    .table-wrap {
+      overflow:auto;
+      border-radius:18px;
+    }
+
+    form {
+      display:grid;
+      grid-template-columns:repeat(2,1fr);
+      gap:12px;
+    }
+
+    .field {
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    label {
+      font-size:13px;
+      font-weight:800;
+      color:#334155;
+    }
+
+    input, select {
+      border:1px solid #cbd5e1;
+      border-radius:14px;
+      padding:13px 12px;
+      font-size:15px;
+      background:white;
+      outline:none;
+    }
+
+    input:focus, select:focus {
+      border-color:var(--azul2);
+      box-shadow:0 0 0 3px rgba(21,94,147,.12);
+    }
+
+    .full { grid-column:1/-1; }
+
+    .btn {
+      border:0;
+      background:linear-gradient(135deg,var(--azul),var(--azul2));
+      color:white;
+      padding:14px 18px;
+      border-radius:16px;
+      font-weight:900;
+      font-size:15px;
+      cursor:pointer;
+    }
+
+    .btn.secondary {
+      background:#e2e8f0;
+      color:#0f3558;
+    }
+
+    .toolbar {
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-bottom:12px;
+    }
+
+    .toolbar input, .toolbar select {
+      min-width:180px;
+      flex:1;
+    }
+
+    .hint {
+      color:var(--muted);
+      font-size:13px;
+      margin:8px 0 0;
+    }
+
+    .loading {
+      padding:16px;
+      border-radius:16px;
+      background:#fff7ed;
+      color:#9a3412;
+      border:1px solid #fed7aa;
+      margin-bottom:14px;
+      display:none;
+    }
+
+    .loading.show { display:block; }
+
+    @media (max-width:900px) {
+      .grid, .charts, form { grid-template-columns:1fr; }
+      header h1 { font-size:22px; }
+      .kpi .value { font-size:28px; }
+      .wrap { margin-top:-14px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Controle de Manutenção</h1>
+    <p>App profissional integrado ao Google Sheets</p>
+  </header>
+
+  <main class="wrap">
+    <nav class="tabs">
+      <button class="tab active" data-tab="dashboard">Dashboard</button>
+      <button class="tab" data-tab="lancamentos">Lançamentos</button>
+      <button class="tab" data-tab="novo">Novo serviço</button>
+      <button class="tab" data-tab="cadastros">Cadastros</button>
+    </nav>
+
+    <div id="loading" class="loading">Carregando dados da planilha...</div>
+
+    <section id="dashboard" class="section active">
+      <div class="grid">
+        <div class="card kpi azul">
+          <div class="label">Total de OS</div>
+          <div id="kpiTotal" class="value">0</div>
+        </div>
+        <div class="card kpi verde">
+          <div class="label">Finalizadas</div>
+          <div id="kpiFinalizadas" class="value">0</div>
+        </div>
+        <div class="card kpi laranja">
+          <div class="label">Em aberto</div>
+          <div id="kpiAberto" class="value">0</div>
+        </div>
+        <div class="card kpi vermelho">
+          <div class="label">SLA dentro</div>
+          <div id="kpiSla" class="value">0%</div>
+        </div>
+      </div>
+
+      <div class="charts">
+        <div class="card">
+          <div class="chart-title">
+            <h3>OS por tipo</h3>
+            <span class="status-pill pill-info">Tipo OS</span>
+          </div>
+          <div id="chartTipo"></div>
+        </div>
+
+        <div class="card">
+          <div class="chart-title">
+            <h3>Status</h3>
+            <span id="slaStatus" class="status-pill pill-bad">SLA</span>
+          </div>
+          <div id="chartStatus"></div>
+        </div>
+
+        <div class="card">
+          <div class="chart-title">
+            <h3>Top fornecedores</h3>
+            <span class="status-pill pill-info">Ranking</span>
+          </div>
+          <div id="chartFornecedor"></div>
+        </div>
+
+        <div class="card">
+          <div class="chart-title">
+            <h3>Resumo SLA</h3>
+            <span class="status-pill pill-info">5 dias</span>
+          </div>
+          <div id="chartSla"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="lancamentos" class="section">
+      <div class="card">
+        <div class="toolbar">
+          <input id="busca" placeholder="Buscar por placa, serviço, fornecedor..." />
+          <select id="filtroStatus">
+            <option value="">Todos os status</option>
+          </select>
+          <button class="btn secondary" onclick="loadData()">Atualizar</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Placa</th>
+                <th>Modelo</th>
+                <th>Serviço</th>
+                <th>Tipo OS</th>
+                <th>Fornecedor</th>
+                <th>Valor</th>
+                <th>Nº OS</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="novo" class="section">
+      <div class="card">
+        <h3 style="margin-top:0">Novo lançamento</h3>
+        <form id="form">
+          <div class="field">
+            <label>Data Entrada</label>
+            <input type="date" name="dataEntrada" required>
+          </div>
+          <div class="field">
+            <label>Placa</label>
+            <input name="placa" placeholder="Ex.: ABC1D23" required>
+          </div>
+          <div class="field">
+            <label>Modelo</label>
+            <input name="modelo" placeholder="Ex.: Oroch">
+          </div>
+          <div class="field">
+            <label>Km Atual</label>
+            <input name="kmAtual" type="number" placeholder="Ex.: 35447">
+          </div>
+          <div class="field">
+            <label>Serviço</label>
+            <input name="servico" placeholder="Ex.: Troca de óleo" required>
+          </div>
+          <div class="field">
+            <label>Tipo OS</label>
+            <select name="tipoOS">
+              <option>Preventiva</option>
+              <option>Corretiva</option>
+              <option>Sinistro</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Fornecedor</label>
+            <input name="fornecedor" placeholder="Ex.: Eunapeças">
+          </div>
+          <div class="field">
+            <label>Valor</label>
+            <input name="valor" type="number" step="0.01" placeholder="Ex.: 250.00">
+          </div>
+          <div class="field">
+            <label>Nº OS</label>
+            <input name="numeroOS" placeholder="Ex.: 12345">
+          </div>
+          <div class="field">
+            <label>Status</label>
+            <select name="status">
+              <option>Aguardando Orçamento</option>
+              <option>Aguardando Aprovação Movida</option>
+              <option>Em Serviço/Autorizada</option>
+              <option>Finalizado</option>
+              <option>Cancelado</option>
+            </select>
+          </div>
+          <div class="full">
+            <button class="btn" type="submit">Salvar na planilha</button>
+            <p class="hint" id="formMsg">Os dados serão gravados na aba Lançamentos do Google Sheets.</p>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="cadastros" class="section">
+      <div class="card">
+        <h3 style="margin-top:0">Cadastros e próximos módulos</h3>
+        <p class="hint">Esta versão já lê e grava lançamentos. A próxima evolução pode trazer cadastro completo de veículos, fornecedores, fotos e login por usuário.</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbyIbgyLSfkcX8sq9Q-JltzcwXZhd2ENsTc6O5w64mepnsGTTtFeMQl1sG86JM5gqcLyYQ/exec";
+    let rawRows = [];
+    let headers = [];
+    let records = [];
+
+    const el = id => document.getElementById(id);
+
+    document.querySelectorAll(".tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+        btn.classList.add("active");
+        el(btn.dataset.tab).classList.add("active");
+      });
+    });
+
+    function normalize(s) {
+      return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    }
+
+    function getField(row, names) {
+      const keys = Object.keys(row);
+      for (const wanted of names) {
+        const w = normalize(wanted);
+        const key = keys.find(k => normalize(k) === w || normalize(k).includes(w));
+        if (key) return row[key];
+      }
+      return "";
+    }
+
+    function toRecords(data) {
+      if (!data || data.length < 1) return [];
+      let headerIndex = data.findIndex(r => r.some(c => normalize(c).includes("placa")));
+      if (headerIndex < 0) headerIndex = 0;
+      headers = data[headerIndex].map(h => String(h || "").trim());
+      return data.slice(headerIndex + 1)
+        .filter(r => r.some(c => String(c || "").trim() !== ""))
+        .map(r => {
+          const obj = {};
+          headers.forEach((h, i) => obj[h || `Coluna ${i+1}`] = r[i] || "");
+          return obj;
+        });
+    }
+
+    async function loadData() {
+      el("loading").classList.add("show");
+      try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        rawRows = data;
+        records = toRecords(data);
+        renderAll();
+      } catch (err) {
+        console.error(err);
+        el("loading").textContent = "Não foi possível carregar os dados. Verifique a implantação do Apps Script.";
+        el("loading").classList.add("show");
+      } finally {
+        setTimeout(() => el("loading").classList.remove("show"), 1200);
+      }
+    }
+
+    function countsBy(fieldFn) {
+      const c = {};
+      records.forEach(r => {
+        const val = String(fieldFn(r) || "(vazio)").trim() || "(vazio)";
+        c[val] = (c[val] || 0) + 1;
+      });
+      return Object.entries(c).sort((a,b) => b[1]-a[1]);
+    }
+
+    function renderBars(id, entries, maxItems=8) {
+      const box = el(id);
+      box.innerHTML = "";
+      const items = entries.slice(0, maxItems);
+      const max = Math.max(...items.map(x => x[1]), 1);
+      items.forEach(([name, value]) => {
+        const div = document.createElement("div");
+        div.className = "bar";
+        div.innerHTML = `
+          <div class="bar-top"><strong>${name}</strong><span>${value}</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(value/max*100)}%"></div></div>
+        `;
+        box.appendChild(div);
+      });
+      if (!items.length) box.innerHTML = '<p class="hint">Sem dados para exibir.</p>';
+    }
+
+    function calcSla() {
+      let dentro = 0, fora = 0;
+      records.forEach(r => {
+        const status = String(getField(r, ["Status", "Situação"]));
+        if (normalize(status).includes("finalizado")) dentro++;
+        else fora++;
+      });
+      const total = dentro + fora;
+      return { dentro, fora, pct: total ? dentro / total : 0 };
+    }
+
+    function renderDashboard() {
+      const total = records.length;
+      const finalizadas = records.filter(r => normalize(getField(r, ["Status", "Situação"])).includes("finalizado")).length;
+      const aberto = total - finalizadas;
+      const sla = calcSla();
+
+      el("kpiTotal").textContent = total;
+      el("kpiFinalizadas").textContent = finalizadas;
+      el("kpiAberto").textContent = aberto;
+      el("kpiSla").textContent = Math.round(sla.pct * 100) + "%";
+
+      const badge = el("slaStatus");
+      const pct = sla.pct;
+      if (pct >= .9) {
+        badge.className = "status-pill pill-ok";
+        badge.textContent = "Dentro da meta";
+      } else if (pct >= .8) {
+        badge.className = "status-pill pill-alert";
+        badge.textContent = "Atenção";
+      } else {
+        badge.className = "status-pill pill-bad";
+        badge.textContent = "Fora da meta";
+      }
+
+      renderBars("chartTipo", countsBy(r => getField(r, ["Tipo OS"])));
+      renderBars("chartStatus", countsBy(r => getField(r, ["Status", "Situação"])));
+      renderBars("chartFornecedor", countsBy(r => getField(r, ["Fornecedor"])), 10);
+      renderBars("chartSla", [["Dentro SLA", sla.dentro], ["Fora SLA", sla.fora]]);
+    }
+
+    function renderTable() {
+      const busca = normalize(el("busca").value);
+      const filtro = normalize(el("filtroStatus").value);
+      const tbody = el("tbody");
+      tbody.innerHTML = "";
+
+      const filtered = records.filter(r => {
+        const status = normalize(getField(r, ["Status", "Situação"]));
+        const txt = normalize(Object.values(r).join(" "));
+        return (!busca || txt.includes(busca)) && (!filtro || status === filtro);
+      });
+
+      filtered.slice(0, 300).forEach(r => {
+        const tr = document.createElement("tr");
+        const status = getField(r, ["Status", "Situação"]);
+        tr.innerHTML = `
+          <td>${getField(r, ["Data Entrada"])}</td>
+          <td><strong>${getField(r, ["Placa"])}</strong></td>
+          <td>${getField(r, ["Modelo"])}</td>
+          <td>${getField(r, ["Serviço"])}</td>
+          <td>${getField(r, ["Tipo OS"])}</td>
+          <td>${getField(r, ["Fornecedor"])}</td>
+          <td>${getField(r, ["Valor"])}</td>
+          <td>${getField(r, ["Nº OS", "N OS", "Numero OS"])}</td>
+          <td><span class="status-pill pill-info">${status || "-"}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderFilters() {
+      const select = el("filtroStatus");
+      const current = select.value;
+      const statuses = [...new Set(records.map(r => String(getField(r, ["Status", "Situação"]) || "").trim()).filter(Boolean))].sort();
+      select.innerHTML = '<option value="">Todos os status</option>' + statuses.map(s => `<option>${s}</option>`).join("");
+      select.value = current;
+    }
+
+    function renderAll() {
+      renderDashboard();
+      renderFilters();
+      renderTable();
+    }
+
+    el("busca").addEventListener("input", renderTable);
+    el("filtroStatus").addEventListener("change", renderTable);
+
+    el("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      const dados = Object.fromEntries(form.entries());
+      el("formMsg").textContent = "Salvando na planilha...";
+
+      try {
+        await fetch(API_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dados)
+        });
+        el("formMsg").textContent = "Lançamento enviado. Atualize o dashboard em alguns segundos.";
+        e.target.reset();
+        setTimeout(loadData, 1800);
+      } catch (err) {
+        console.error(err);
+        el("formMsg").textContent = "Erro ao salvar. Verifique a implantação do Apps Script.";
+      }
+    });
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("service-worker.js").catch(() => {});
+    }
+
+    loadData();
+  </script>
+</body>
+</html>

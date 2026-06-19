@@ -1,4 +1,10 @@
-const CACHE='controle-manutencao-v1';
-const ASSETS=['./','./index.html','./manifest.json','./icon.svg'];
-self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));
-self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));
+const CACHE_NAME = "controle-manutencao-pro-v1";
+const FILES = ["./", "index.html", "manifest.json", "icon.svg"];
+
+self.addEventListener("install", event => {
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(FILES)));
+});
+
+self.addEventListener("fetch", event => {
+  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
+});

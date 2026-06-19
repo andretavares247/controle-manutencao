@@ -404,7 +404,7 @@
           </div>
           <div class="field">
             <label>Placa</label>
-            <input name="placa" placeholder="Ex.: ABC1D23" required>
+            <input name="placa" id="placaInput" placeholder="Ex.: ABC1D23" required>
           </div>
           <div class="field">
             <label>Modelo</label>
@@ -469,6 +469,7 @@
     let rawRows = [];
     let headers = [];
     let records = [];
+    let veiculos = [];
 
     const el = id => document.getElementById(id);
 
@@ -514,9 +515,12 @@
       try {
         const res = await fetch(API_URL);
         const data = await res.json();
-        rawRows = data;
-        records = toRecords(data);
-        renderAll();
+
+rawRows = data.lancamentos || [];
+records = toRecords(rawRows);
+veiculos = toRecords(data.veiculos || []);
+
+renderAll();
       } catch (err) {
         console.error(err);
         el("loading").textContent = "Não foi possível carregar os dados. Verifique a implantação do Apps Script.";
@@ -665,7 +669,26 @@
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("service-worker.js").catch(() => {});
     }
+function buscarModeloPorPlaca(placa) {
+  placa = String(placa || "").toUpperCase().trim();
 
+  const registro = records.find(r =>
+    String(getField(r, ["Placa"]) || "").toUpperCase().trim() === placa
+  );
+
+  if (registro) {
+    const modelo = getField(registro, ["Modelo"]);
+    const campoModelo = document.querySelector('input[name="modelo"]');
+
+    if (campoModelo && modelo) {
+      campoModelo.value = modelo;
+    }
+  }
+}
+
+document.getElementById("placaInput").addEventListener("blur", function () {
+  buscarModeloPorPlaca(this.value);
+});
     loadData();
   </script>
 </body>
